@@ -1,0 +1,76 @@
+
+from itertools import combinations
+from collections import deque
+
+# Generate network links
+def links(kind, n):
+    nodes = list(range(n))
+
+    if kind == "bus":
+        return [(i, i + 1) for i in range(n - 1)]
+
+    if kind == "ring":
+        return [(i, (i + 1) % n) for i in range(n)]
+
+    if kind == "star":
+        return [("hub", i) for i in nodes]
+
+    if kind == "mesh":
+        return list(combinations(nodes, 2))
+
+    raise ValueError(kind)
+
+
+# Check connectivity after one link failure
+def connected_after_failure(edges, n, broken):
+    remaining = [edge for edge in edges if edge != broken]
+
+    graph = {}
+
+    for a, b in remaining:
+        graph.setdefault(a, []).append(b)
+        graph.setdefault(b, []).append(a)
+
+    visited = {0}
+    queue = deque([0])
+
+    while queue:
+        current = queue.popleft()
+
+        for neighbour in graph.get(current, []):
+            if neighbour not in visited:
+                visited.add(neighbour)
+                queue.append(neighbour)
+
+    return all(node in visited for node in range(n))
+
+
+# Main program
+n = 6
+
+for kind in ("bus", "ring", "star", "mesh"):
+
+    edge_list = links(kind, n)
+
+    devices = set()
+
+    for a, b in edge_list:
+        devices.add(a)
+        devices.add(b)
+
+    max_ports = max(
+        sum(1 for a, b in edge_list if device in (a, b))
+        for device in devices
+    )
+
+    survived = sum(
+        connected_after_failure(edge_list, n, broken)
+        for broken in edge_list
+    )
+
+    print(
+        f"{kind:<5} links {len(edge_list):2d} "
+        f"max ports on one device {max_ports} "
+        f"single-link failures survived "
+        f"{survived}/{len(edge_list)}"
+    )
